@@ -23,29 +23,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Auto-Extract Zip & Fix Structure
+      - name: Prepare Workspace & Test Server
         run: |
           echo "Scanning workspace structure:"
           ls -la
 
-          # If a zip file was committed instead of the source files, find and extract it!
-          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
-          if [ -n "$ZIP_FILE" ]; then
-            echo "Found zip file: $ZIP_FILE. Extracting contents..."
-            unzip -o "$ZIP_FILE" -d extracted_source
-            shopt -s dotglob
-            mv extracted_source/* .
-            rm -rf extracted_source "$ZIP_FILE"
-            echo "Extraction complete. New workspace layout:"
-            ls -la
-          fi
-
-          # Fallback check for nested folders
+          # Auto-flatten if files were nested inside any subfolder
           if [ ! -f "settings.gradle" ]; then
             SUBDIR=$(find . -maxdepth 2 -name "settings.gradle" -not -path "./settings.gradle" | head -n 1)
             if [ -n "$SUBDIR" ]; then
               PROJECT_DIR=$(dirname "$SUBDIR")
-              echo "Moving files from subdirectory: $PROJECT_DIR to root..."
+              echo "Found project root inside subdirectory: $PROJECT_DIR. Moving files to workspace root..."
               shopt -s dotglob
               mv "$PROJECT_DIR"/* .
               rmdir "$PROJECT_DIR"
@@ -53,7 +41,7 @@ jobs:
           fi
 
           if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle could still not be located!"
+            echo "Error: settings.gradle could not be located in workspace root or subdirectories!"
             exit 1
           fi
 
