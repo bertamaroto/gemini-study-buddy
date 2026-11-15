@@ -1,9 +1,12 @@
-name: Build Android APK & Server
+name: Build Android APK & Publish Release
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-apk:
@@ -23,50 +26,43 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Unpack Zip and Verify Workspace
+      - name: Unpack Zip (if present) & Verify Workspace
         run: |
-          echo "Scanning workspace structure before extraction:"
+          echo "Scanning workspace:"
           ls -la
 
-          # Find any zip file in the root and extract it immediately
           ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
           if [ -n "$ZIP_FILE" ]; then
-            echo "Found zip file: $ZIP_FILE. Extracting contents..."
+            echo "Found zip file: $ZIP_FILE. Extracting..."
             unzip -o "$ZIP_FILE" -d extracted_source
             shopt -s dotglob
             mv extracted_source/* .
             rm -rf extracted_source "$ZIP_FILE"
-            echo "Extraction complete. New workspace layout:"
             ls -la
           fi
 
           if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle not found in root workspace!"
+            SUBDIR=$(find . -maxdepth 2 -name "settings.gradle" -not -path "./settings.gradle" | head -n 1)
+            if [ -n "$SUBDIR" ]; then
+              PROJECT_DIR=$(dirname "$SUBDIR")
+              shopt -s dotglob
+              mv "$PROJECT_DIR"/* .
+              rmdir "$PROJECT_DIR"
+            fi
+          fi
+
+          if [ ! -f "settings.gradle" ]; then
+            echo "Error: settings.gradle not found!"
             exit 1
           fi
 
-          if [ ! -f "gradle.properties" ]; then
-            echo "Error: gradle.properties not found in root workspace!"
-            exit 1
-          fi
-
-          # Test server if present
           if [ -d "server" ]; then
             cd server
             npm install
             node --check server.js
-          elif [ -f "server/package.json" ]; then
-            cd server
-            npm install
-            node --check server.js
-          elif [ -f "package.json" ]; then
-            npm install
-            node --check server.js
-          else
-            echo "No server folder found, skipping check"
           fi
 
-      - name: Setup Gradle & Build APK
+      - name: Build Debug APK
         run: |
           unset ANDROID_SDK_ROOT
           export ANDROID_HOME=/usr/local/lib/android/sdk
@@ -81,15 +77,20 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
-          echo "Searching for generated APKs:"
-          find . -name "*.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk KawaiiStudyBCN.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KawaiiStudy-BCN-debug-apk
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            **/app-debug.apk
-            **/*.apk
+          name: KawaiiStudyBCN-APK
+          path: KawaiiStudyBCN.apk
           if-no-files-found: error
+
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-apk
+          name: "🌸 Kawaii Study BCN - Latest Android APK"
+          body: "Download `KawaiiStudyBCN.apk` directly below and install it on your Android device."
+          files: KawaiiStudyBCN.apk
+          overwrite: true
