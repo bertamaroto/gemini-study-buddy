@@ -23,25 +23,18 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Prepare Workspace & Test Server
+      - name: Verify Project Structure & Test Server
         run: |
-          echo "Scanning workspace structure:"
+          echo "Verifying root workspace structure:"
           ls -la
 
-          # Auto-flatten if files were nested inside any subfolder
           if [ ! -f "settings.gradle" ]; then
-            SUBDIR=$(find . -maxdepth 2 -name "settings.gradle" -not -path "./settings.gradle" | head -n 1)
-            if [ -n "$SUBDIR" ]; then
-              PROJECT_DIR=$(dirname "$SUBDIR")
-              echo "Found project root inside subdirectory: $PROJECT_DIR. Moving files to workspace root..."
-              shopt -s dotglob
-              mv "$PROJECT_DIR"/* .
-              rmdir "$PROJECT_DIR"
-            fi
+            echo "Error: settings.gradle not found in root workspace!"
+            exit 1
           fi
 
-          if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle could not be located in workspace root or subdirectories!"
+          if [ ! -f "gradle.properties" ]; then
+            echo "Error: gradle.properties not found in root workspace!"
             exit 1
           fi
 
