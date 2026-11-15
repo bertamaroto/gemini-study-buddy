@@ -51,7 +51,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle & Build APK
+      - name: Setup Gradle & Build
         run: |
           unset ANDROID_SDK_ROOT
           export ANDROID_HOME=/usr/local/lib/android/sdk
@@ -98,15 +98,15 @@ jobs:
           chmod +x gradlew
           ./gradlew clean assembleDebug --no-daemon --stacktrace
 
-          echo "Searching for generated APKs:"
-          find . -name "*.apk"
+          echo "Searching for build outputs (APKs / AARs):"
+          find . -name "*.apk" -o -name "*.aar"
 
-      - name: Upload APK Artifact
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KawaiiStudy-BCN-debug-apk
+          name: KawaiiStudy-BCN-debug-build
           path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            **/app-debug.apk
+            app/build/outputs/
             **/*.apk
+            **/*.aar
           if-no-files-found: error
