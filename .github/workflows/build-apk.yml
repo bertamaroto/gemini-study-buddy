@@ -51,7 +51,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle & Build
+      - name: Setup Gradle & Build APK
         run: |
           unset ANDROID_SDK_ROOT
           export ANDROID_HOME=/usr/local/lib/android/sdk
@@ -96,7 +96,8 @@ jobs:
           fi
           
           chmod +x gradlew
-          ./gradlew clean assembleDebug --no-daemon --stacktrace
+          # Explicitly build the app module task
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
           echo "Searching for build outputs (APKs / AARs):"
           find . -name "*.apk" -o -name "*.aar"
