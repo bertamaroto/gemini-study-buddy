@@ -79,18 +79,16 @@ jobs:
             unzip -o kawaiistudy-bcn-github-apk.zip
           fi
 
-          # Fix conflicting allprojects block in build.gradle for modern Gradle settings repositories
+          # Cleanly remove allprojects block from build.gradle without syntax errors
           if [ -f "build.gradle" ]; then
             python3 -c '
+            import re
             with open("build.gradle", "r") as f:
                 content = f.read()
-            # Remove allprojects block entirely
-            if "allprojects" in content:
-                parts = content.split("allprojects")
-                new_content = parts[0] + "\n" + "\n".join(p.split("}", 1)[1] for p in parts[1:] if "}" in p)
-                with open("build.gradle", "w") as f:
-                    f.write(new_content)
-                print("Successfully patched build.gradle to remove allprojects block.")
+            content = re.sub(r"allprojects\s*\{[^}]*\}", "", content)
+            with open("build.gradle", "w") as f:
+                f.write(content)
+            print("Successfully removed allprojects block from build.gradle.")
             '
           fi
 
