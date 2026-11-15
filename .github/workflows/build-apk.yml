@@ -79,16 +79,26 @@ jobs:
             unzip -o kawaiistudy-bcn-github-apk.zip
           fi
 
-          # Cleanly remove allprojects block from build.gradle without syntax errors
+          # Cleanly remove allprojects block and its nested braces from build.gradle
           if [ -f "build.gradle" ]; then
             python3 -c '
-            import re
             with open("build.gradle", "r") as f:
                 content = f.read()
-            content = re.sub(r"allprojects\s*\{[^}]*\}", "", content)
-            with open("build.gradle", "w") as f:
-                f.write(content)
-            print("Successfully removed allprojects block from build.gradle.")
+            idx = content.find("allprojects")
+            if idx != -1:
+                open_brace = content.find("{", idx)
+                brace_count = 1
+                curr = open_brace + 1
+                while curr < len(content) and brace_count > 0:
+                    if content[curr] == "{":
+                        brace_count += 1
+                    elif content[curr] == "}":
+                        brace_count -= 1
+                    curr += 1
+                content = content[:idx] + content[curr:]
+                with open("build.gradle", "w") as f:
+                    f.write(content)
+                print("Successfully removed allprojects block from build.gradle.")
             '
           fi
 
