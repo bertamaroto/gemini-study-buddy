@@ -23,10 +23,22 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Verify Project Structure & Test Server
+      - name: Unpack Zip and Verify Workspace
         run: |
-          echo "Verifying root workspace structure:"
+          echo "Scanning workspace structure before extraction:"
           ls -la
+
+          # Find any zip file in the root and extract it immediately
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Found zip file: $ZIP_FILE. Extracting contents..."
+            unzip -o "$ZIP_FILE" -d extracted_source
+            shopt -s dotglob
+            mv extracted_source/* .
+            rm -rf extracted_source "$ZIP_FILE"
+            echo "Extraction complete. New workspace layout:"
+            ls -la
+          fi
 
           if [ ! -f "settings.gradle" ]; then
             echo "Error: settings.gradle not found in root workspace!"
