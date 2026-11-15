@@ -17,13 +17,9 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Locate & Test Server
+      - name: Install & Check Server
         run: |
           if [ -d "server" ]; then
-            cd server
-            npm install
-            node --check server.js
-          elif [ -f "server/package.json" ]; then
             cd server
             npm install
             node --check server.js
@@ -65,27 +61,21 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Setup Gradle & Build APK
+      - name: Build APK with Gradle Wrapper
         run: |
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
           
-          # Automatically find where settings.gradle is located in the repo
-          if [ -f "settings.gradle" ]; then
-            BUILD_DIR="."
-          elif [ -f "kawaiistudy-bcn-fixed/settings.gradle" ]; then
-            BUILD_DIR="kawaiistudy-bcn-fixed"
-          else
-            # Search for directory containing settings.gradle
-            BUILD_DIR=$(dirname "$(find . -name "settings.gradle" -not -path "*/.*" | head -n 1)")
-          fi
+          # Ensure we are in the repository root where settings.gradle resides
+          cd ${{ github.workspace }}
+          pwd
+          ls -la
 
-          echo "Found Gradle project in: $BUILD_DIR"
-          cd "$BUILD_DIR"
-
+          # Generate wrapper if missing
           if [ ! -f "gradlew" ]; then
             gradle wrapper --gradle-version 8.4
           fi
+          
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
@@ -93,4 +83,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KawaiiStudy-BCN-debug-apk
-          path: '**/app/build/outputs/apk/debug/app-debug.apk'
+          path: app/build/outputs/apk/debug/app-debug.apk
