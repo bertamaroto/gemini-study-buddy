@@ -17,9 +17,20 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install & Check Server
+      - name: Locate & Test Server
         run: |
+          # If a zip exists, extract it first so server files are accessible
+          if [ -f "kawaiistudy-bcn-github-apk.zip" ]; then
+            unzip -o kawaiistudy-bcn-github-apk.zip
+          elif [ -f "kawaiistudy-bcn-complete.zip" ]; then
+            unzip -o kawaiistudy-bcn-complete.zip
+          fi
+
           if [ -d "server" ]; then
+            cd server
+            npm install
+            node --check server.js
+          elif [ -f "server/package.json" ]; then
             cd server
             npm install
             node --check server.js
@@ -61,17 +72,30 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Build APK with Gradle Wrapper
+      - name: Setup Gradle & Build APK
         run: |
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
           
-          # Ensure we are in the repository root where settings.gradle resides
           cd ${{ github.workspace }}
+          
+          # Automatically extract the project zip if it's sitting in the root
+          if [ -f "kawaiistudy-bcn-github-apk.zip" ]; then
+            echo "Extracting project ZIP..."
+            unzip -o kawaiistudy-bcn-github-apk.zip
+          elif [ -f "kawaiistudy-bcn-complete.zip" ]; then
+            echo "Extracting project ZIP..."
+            unzip -o kawaiistudy-bcn-complete.zip
+          fi
+
           pwd
           ls -la
 
-          # Generate wrapper if missing
+          if [ ! -f "settings.gradle" ]; then
+            echo "Error: settings.gradle still not found in root after extraction!"
+            exit 1
+          fi
+
           if [ ! -f "gradlew" ]; then
             gradle wrapper --gradle-version 8.4
           fi
