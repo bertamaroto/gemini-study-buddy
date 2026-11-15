@@ -17,8 +17,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Locate & Test Server
+      - name: Unpack Source Zip & Test Server
         run: |
+          if [ -f "kawaiistudy-bcn-source.zip" ]; then
+            echo "Unzipping project source..."
+            unzip -o kawaiistudy-bcn-source.zip
+          fi
+
           if [ -d "server" ]; then
             cd server
             npm install
@@ -55,8 +60,13 @@ jobs:
           
           cd ${{ github.workspace }}
 
+          if [ -f "kawaiistudy-bcn-source.zip" ]; then
+            echo "Unzipping project source in build job..."
+            unzip -o kawaiistudy-bcn-source.zip
+          fi
+
           if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle not found in root workspace!"
+            echo "Error: settings.gradle not found in root workspace after unzip!"
             exit 1
           fi
 
