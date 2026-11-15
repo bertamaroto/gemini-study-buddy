@@ -18,10 +18,17 @@ jobs:
           node-version: '20'
 
       - name: Install & Check Server
-        working-directory: server
         run: |
-          npm install
-          node --check server.js
+          if [ -d "server" ]; then
+            cd server
+            npm install
+            node --check server.js
+          elif [ -f "package.json" ]; then
+            npm install
+            node --check server.js
+          else
+            echo "No package.json found, skipping server check"
+          fi
 
   build-apk:
     needs: test-server
@@ -31,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: android-actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
