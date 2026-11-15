@@ -56,7 +56,7 @@ jobs:
           cd ${{ github.workspace }}
 
           if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle not found!"
+            echo "Error: settings.gradle not found in root workspace!"
             exit 1
           fi
 
