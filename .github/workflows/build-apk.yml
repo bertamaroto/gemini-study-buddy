@@ -6,7 +6,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-apk-and-server:
+  test-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install & Check Server
+        working-directory: server
+        run: |
+          npm install
+          node --check server.js
+
+  build-apk:
+    needs: test-server
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -19,24 +37,23 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v2
 
-      - name: Grant execute permission for gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.4'
+
+      - name: Generate Gradle Wrapper & Build APK
         run: |
-          cd app || cd .
-          if [ -f "gradlew" ]; then
-            chmod +x gradlew
-          else
-            gradle wrapper
-            chmod +x gradlew
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper --gradle-version 8.4
           fi
-
-      - name: Build APK with Gradle
-        run: |
-          ./gradlew assembleDebug
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: KawaiiStudy-BCN-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
