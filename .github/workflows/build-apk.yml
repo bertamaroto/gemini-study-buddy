@@ -6,19 +6,46 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-server:
+  build-apk:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Locate & Test Server
+      - name: Auto-Fix Directory Structure & Test Server
         run: |
+          echo "Scanning workspace structure:"
+          ls -la
+
+          # Auto-flatten if files were nested inside a subfolder
+          if [ ! -f "settings.gradle" ]; then
+            SUBDIR=$(find . -maxdepth 2 -name "settings.gradle" -not -path "./settings.gradle" | head -n 1)
+            if [ -n "$SUBDIR" ]; then
+              PROJECT_DIR=$(dirname "$SUBDIR")
+              echo "Found project root inside subdirectory: $PROJECT_DIR. Moving files to workspace root..."
+              shopt -s dotglob
+              mv "$PROJECT_DIR"/* .
+              rmdir "$PROJECT_DIR"
+            fi
+          fi
+
+          if [ ! -f "settings.gradle" ]; then
+            echo "Error: settings.gradle could not be located in workspace root or subdirectories!"
+            exit 1
+          fi
+
+          # Test server if present
           if [ -d "server" ]; then
             cd server
             npm install
@@ -34,19 +61,6 @@ jobs:
             echo "No server folder found, skipping check"
           fi
 
-  build-apk:
-    needs: test-server
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - name: Setup Gradle & Build APK
         run: |
           unset ANDROID_SDK_ROOT
@@ -54,11 +68,6 @@ jobs:
           export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin
           
           cd ${{ github.workspace }}
-
-          if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle not found in root workspace!"
-            exit 1
-          fi
 
           if [ ! -f "gradlew" ]; then
             gradle wrapper --gradle-version 8.4
