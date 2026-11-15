@@ -19,11 +19,8 @@ jobs:
 
       - name: Locate & Test Server
         run: |
-          # If a zip exists, extract it first so server files are accessible
           if [ -f "kawaiistudy-bcn-github-apk.zip" ]; then
             unzip -o kawaiistudy-bcn-github-apk.zip
-          elif [ -f "kawaiistudy-bcn-complete.zip" ]; then
-            unzip -o kawaiistudy-bcn-complete.zip
           fi
 
           if [ -d "server" ]; then
@@ -60,14 +57,12 @@ jobs:
           mkdir -p $HOME/android-sdk
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           
-          # Download official Android command-line tools
           cd $HOME
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
           mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
           unzip -q cmdline-tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
           mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
           
-          # Accept licenses and install packages
           export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
@@ -79,20 +74,28 @@ jobs:
           
           cd ${{ github.workspace }}
           
-          # Automatically extract the project zip if it's sitting in the root
           if [ -f "kawaiistudy-bcn-github-apk.zip" ]; then
             echo "Extracting project ZIP..."
             unzip -o kawaiistudy-bcn-github-apk.zip
-          elif [ -f "kawaiistudy-bcn-complete.zip" ]; then
-            echo "Extracting project ZIP..."
-            unzip -o kawaiistudy-bcn-complete.zip
           fi
 
-          pwd
-          ls -la
+          # Fix conflicting allprojects block in build.gradle for modern Gradle settings repositories
+          if [ -f "build.gradle" ]; then
+            python3 -c '
+            with open("build.gradle", "r") as f:
+                content = f.read()
+            # Remove allprojects block entirely
+            if "allprojects" in content:
+                parts = content.split("allprojects")
+                new_content = parts[0] + "\n" + "\n".join(p.split("}", 1)[1] for p in parts[1:] if "}" in p)
+                with open("build.gradle", "w") as f:
+                    f.write(new_content)
+                print("Successfully patched build.gradle to remove allprojects block.")
+            '
+          fi
 
           if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle still not found in root after extraction!"
+            echo "Error: settings.gradle not found in root after extraction!"
             exit 1
           fi
 
