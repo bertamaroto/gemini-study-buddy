@@ -17,9 +17,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install & Check Server
+      - name: Locate & Test Server
         run: |
           if [ -d "server" ]; then
+            cd server
+            npm install
+            node --check server.js
+          elif [ -f "server/package.json" ]; then
             cd server
             npm install
             node --check server.js
@@ -27,7 +31,7 @@ jobs:
             npm install
             node --check server.js
           else
-            echo "No package.json found, skipping server check"
+            echo "No server folder found, skipping check"
           fi
 
   build-apk:
@@ -61,21 +65,23 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.4'
-
-      - name: Verify Gradle Project Root & Build APK
+      - name: Setup Gradle & Build APK
         run: |
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
           
-          # Confirm settings.gradle is present
-          if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle not found in root directory!"
-            exit 1
+          # Automatically find where settings.gradle is located in the repo
+          if [ -f "settings.gradle" ]; then
+            BUILD_DIR="."
+          elif [ -f "kawaiistudy-bcn-fixed/settings.gradle" ]; then
+            BUILD_DIR="kawaiistudy-bcn-fixed"
+          else
+            # Search for directory containing settings.gradle
+            BUILD_DIR=$(dirname "$(find . -name "settings.gradle" -not -path "*/.*" | head -n 1)")
           fi
+
+          echo "Found Gradle project in: $BUILD_DIR"
+          cd "$BUILD_DIR"
 
           if [ ! -f "gradlew" ]; then
             gradle wrapper --gradle-version 8.4
@@ -87,4 +93,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KawaiiStudy-BCN-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: '**/app/build/outputs/apk/debug/app-debug.apk'
