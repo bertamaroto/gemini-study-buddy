@@ -19,10 +19,6 @@ jobs:
 
       - name: Locate & Test Server
         run: |
-          if [ -f "kawaiistudy-bcn-github-apk.zip" ]; then
-            unzip -o kawaiistudy-bcn-github-apk.zip
-          fi
-
           if [ -d "server" ]; then
             cd server
             npm install
@@ -58,36 +54,9 @@ jobs:
           export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin
           
           cd ${{ github.workspace }}
-          
-          if [ -f "kawaiistudy-bcn-github-apk.zip" ]; then
-            echo "Extracting project ZIP..."
-            unzip -o kawaiistudy-bcn-github-apk.zip
-          fi
-
-          if [ -f "build.gradle" ]; then
-            python3 -c '
-            with open("build.gradle", "r") as f:
-                content = f.read()
-            idx = content.find("allprojects")
-            if idx != -1:
-                open_brace = content.find("{", idx)
-                brace_count = 1
-                curr = open_brace + 1
-                while curr < len(content) and brace_count > 0:
-                    if content[curr] == "{":
-                        brace_count += 1
-                    elif content[curr] == "}":
-                        brace_count -= 1
-                    curr += 1
-                content = content[:idx] + content[curr:]
-                with open("build.gradle", "w") as f:
-                    f.write(content)
-                print("Successfully removed allprojects block from build.gradle.")
-            '
-          fi
 
           if [ ! -f "settings.gradle" ]; then
-            echo "Error: settings.gradle not found in root after extraction!"
+            echo "Error: settings.gradle not found!"
             exit 1
           fi
 
@@ -96,18 +65,17 @@ jobs:
           fi
           
           chmod +x gradlew
-          # Explicitly build the app module task
           ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
-          echo "Searching for build outputs (APKs / AARs):"
-          find . -name "*.apk" -o -name "*.aar"
+          echo "Searching for generated APKs:"
+          find . -name "*.apk"
 
-      - name: Upload Build Artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KawaiiStudy-BCN-debug-build
+          name: KawaiiStudy-BCN-debug-apk
           path: |
-            app/build/outputs/
+            app/build/outputs/apk/debug/app-debug.apk
+            **/app-debug.apk
             **/*.apk
-            **/*.aar
           if-no-files-found: error
