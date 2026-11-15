@@ -53,7 +53,6 @@ jobs:
 
       - name: Setup Gradle & Build APK
         run: |
-          # Use preinstalled Android SDK and unset competing root variable to prevent Gradle conflict
           unset ANDROID_SDK_ROOT
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin
@@ -65,7 +64,6 @@ jobs:
             unzip -o kawaiistudy-bcn-github-apk.zip
           fi
 
-          # Cleanly remove allprojects block and its nested braces from build.gradle
           if [ -f "build.gradle" ]; then
             python3 -c '
             with open("build.gradle", "r") as f:
@@ -98,10 +96,17 @@ jobs:
           fi
           
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew clean assembleDebug --no-daemon --stacktrace
+
+          echo "Searching for generated APKs:"
+          find . -name "*.apk"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: KawaiiStudy-BCN-debug-apk
-          path: '**/*.apk'
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            **/app-debug.apk
+            **/*.apk
+          if-no-files-found: error
